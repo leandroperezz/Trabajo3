@@ -3,13 +3,14 @@ import { BrowserRouter, Routes, Route, Link, useNavigate, useParams } from 'reac
 import axios from 'axios';
 import './App.css';
 
-//Página que busca al artista y sus álbumes
-function App() {
+//Página que busca al artista, sus álbumes y los detalles de los álbumes
+ function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Principal />} /> 
         <Route path="/artist/:id" element={<Detalleartista />} />
+        <Route path="/album/:id/:artistId" element={<DetalleAlbum />} />
       </Routes>
     </BrowserRouter>
   );
@@ -23,10 +24,15 @@ function Principal(){
   const [token, setToken] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [artista, setArtista] = useState([]);
-  const navegacion = useState();
+  const [favoritos, setFavoritos] = useState([]);
+  const navigate = useNavigate();
 
   //Pide token a la API y la guarda
   useEffect(() => {
+
+    const favs = JSON.parse(localStorage.getItem("artistaFavoritos")) || [];
+    setFavoritos(favs);
+
     axios.post("https://accounts.spotify.com/api/token",
       new URLSearchParams({
         grant_type: "client_credentials",
@@ -36,31 +42,41 @@ function Principal(){
       {
         headers: { "Content-Type": "application/x-www-form-urlencoded" }
       }
-    ).then(response => {
-      setToken(response.data.access_token);
+    ).then(response =>{ setToken(response.data.access_token);
       axios.defaults.headers.common['Authorization'] = "Bearer " + response.data.access_token;
     }).catch(error => console.error("Error al obtener token:", error));
   }, []);
 
   //Trabaja y actualiza (No recarga) la página
-  const buscar = (e) => {
+  const buscar = (e)=>{
     e.preventDefault();
-    if (query.trim() === "") return;
+    if (busqueda.trim() === "") return;
 
-    axios.get(`https://api.spotify.com/v1/search?q=${query}&type=artist&limit=10`)
-      .then(res => {
-        setArtista(res.data.artista.items);
+    axios.get(`https://api.spotify.com/v1/search?q=${busqueda}&type=artist&limit=10`).then(res => {
+        setArtista(res.data.artists.items);
       }).catch(err => console.error("Error al buscar artista:", err));
   };
 
-  return(<div className="App">
+  const guardaFavorito = (artista) =>{
+    let actualizados;
+    if(favoritos.find(a=>a.id === artista.id)){
+      actualizados=favoritos.filter(a=>a.id !== artista.id)
+    }
+    else{
+      actualizados = [...favoritos, artista];
+    }
+    setFavoritos(actualizados);
+    localStorage.setItem("artistasFavoritos", JSON.stringify(actualizados))
+  }
+
+  return(<div className = "App">
     <h1>Buscar Artistas</h1>
-    <form onSubmit={searchArtista}>
-      <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Nombre del artista..." />
+    <form onSubmit={buscar}>
+      <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Nombre del artista..." />
       <button type="submit">Buscar</button>
     </form>
 
-    <div className="listaartista">
+    <div className = "listaartista">
       {artista.map(artista => (
         <div key={artista.id} className="artist-card" onClick={() => navigate(`/artist/${artista.id}`)}>
           <img src={artista.images[0]?.url} alt={artista.name} />
@@ -76,6 +92,7 @@ function Detalleartista() {
   const { id } = useParams();
   const [artista, setArtista] = useState(null);
   const [albums, setAlbums] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     axios.get(`https://api.spotify.com/v1/artists/${id}`)
@@ -88,30 +105,60 @@ function Detalleartista() {
   }, [id]);
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <Link to="/" style={{ marginBottom: '1rem', display: 'inline-block' }}>⬅ Volver</Link>
+    <div className="detalle-artista">
+      <Link to="/" className="volver">Volver</Link>
 
       {artista && (
         <>
           <h1>{artista.name}</h1>
-          {artista.images[0] && <img src={artista.images[0].url} alt={artista.name} width="200" />}
+          {artista.images[0] && <img src={artista.images[0].url} alt={artista.name} />}
         </>
       )}
 
-      <h2>Álbumes</h2>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginTop: '1rem' }}>
-        {albums.map(album => (
-          <div key={album.id} style={{ border: '1px solid #ccc', padding: '1rem', width: '150px', textAlign: 'center' }}>
-            {album.images[0] && (
-              <img src={album.images[0].url} alt={album.name} style={{ width: '100%', borderRadius: '8px' }} />
-            )}
-            <h4>{album.name}</h4>
-            <p>{album.release_date.slice(0, 4)}</p>
-          </div>
-        ))}
+  <div className="albumes">
+    {albums.map(album => (
+      <div key={album.id} className="album" onClick={() => navigate(`/album/${album.id}/${id}`)} style={{ cursor: 'pointer' }}>
+        {album.images[0] && <img src={album.images[0].url} alt={album.name} />}
+        <h4>{album.name}</h4>
+        <p>{album.release_date.slice(0, 4)}</p>
       </div>
+    ))}
+  </div>
+</div>
+);
+}
+
+//Pagina detalle álbum
+function DetalleAlbum() {
+  const { id, artistId } = useParams();
+  const [album, setAlbum] = useState(null);
+
+  useEffect(() => {
+    axios.get(`https://api.spotify.com/v1/albums/${id}`)
+      .then(res => setAlbum(res.data))
+      .catch(err => console.error("Error al cargar álbum:", err));
+  }, [id]);
+
+  return (
+    <div className="detalle-album">
+      <Link to={`/artist/${artistId}`} className="volver">⬅ Volver al artista</Link>
+
+      {album && (
+        <>
+          <h1>{album.name}</h1>
+          <h2>{album.artists[0]?.name}</h2>
+          {album.images[0] && <img src={album.images[0].url} alt={album.name} style={{ width: 300 }} />}
+          
+          <h3>Lista de temas</h3>
+          <ol>
+            {album.tracks.items.map(track => (
+              <li key={track.id}>{track.name}</li>
+            ))}
+          </ol>
+        </>
+      )}
     </div>
   );
 }
 
-export default Principal;
+export default App;
