@@ -17,19 +17,20 @@ import './App.css';
 }
 
 //Página principal
+import { useLocation } from 'react-router-dom';
+
 function Principal(){
   const CLIENTID = "13c5f32a119e4ff6a413fc02afaa8234";
   const CLIENTSECRET = "76e5e5814baa46e49625989b8f607cf3";
-  
+
+  const location = useLocation();
   const [token, setToken] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [artista, setArtista] = useState([]);
   const [favoritos, setFavoritos] = useState([]);
   const navigate = useNavigate();
 
-  //Pide token a la API y la guarda
   useEffect(() => {
-
     const favs = JSON.parse(localStorage.getItem("artistaFavoritos")) || [];
     setFavoritos(favs);
 
@@ -42,19 +43,30 @@ function Principal(){
       {
         headers: { "Content-Type": "application/x-www-form-urlencoded" }
       }
-    ).then(response =>{ setToken(response.data.access_token);
+    ).then(response =>{
+      setToken(response.data.access_token);
       axios.defaults.headers.common['Authorization'] = "Bearer " + response.data.access_token;
     }).catch(error => console.error("Error al obtener token:", error));
   }, []);
 
-  //Trabaja y actualiza (No recarga) la página
-  const buscar = (e)=>{
-    e.preventDefault();
-    if (busqueda.trim() === "") return;
+  // Leer búsqueda de la URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get("q");
+    if (q) {
+      setBusqueda(q);
+      buscar(null, q);  // llamada inicial
+    }
+  }, [location.search]);
 
-    axios.get(`https://api.spotify.com/v1/search?q=${busqueda}&type=artist&limit=10`).then(res => {
-        setArtista(res.data.artists.items);
-      }).catch(err => console.error("Error al buscar artista:", err));
+  const buscar = (e, textoBusqueda) => {
+    if (e) e.preventDefault();
+    const termino = textoBusqueda || busqueda;
+    if (termino.trim() === "") return;
+
+    axios.get(`https://api.spotify.com/v1/search?q=${termino}&type=artist&limit=10`)
+      .then(res => setArtista(res.data.artists.items))
+      .catch(err => console.error("Error al buscar artista:", err));
   };
 
   const guardaFavorito = (artista) =>{
@@ -69,16 +81,16 @@ function Principal(){
     localStorage.setItem("artistasFavoritos", JSON.stringify(actualizados))
   }
 
-  return(<div className = "App">
+  return(<div className="App">
     <h1>Buscar Artistas</h1>
     <form onSubmit={buscar}>
       <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Nombre del artista..." />
       <button type="submit">Buscar</button>
     </form>
 
-    <div className = "listaartista">
+    <div className="listaartista">
       {artista.map(artista => (
-        <div key={artista.id} className="artist-card" onClick={() => navigate(`/artist/${artista.id}`)}>
+        <div key={artista.id} className="artist-card" onClick={() => navigate(`/artist/${artista.id}?q=${busqueda}`)}>
           <img src={artista.images[0]?.url} alt={artista.name} />
           <p>{artista.name}</p>
         </div>
@@ -92,7 +104,11 @@ function Detalleartista() {
   const { id } = useParams();
   const [artista, setArtista] = useState(null);
   const [albums, setAlbums] = useState([]);
+  const [favoritos, setFavoritos] = useState([]);
   const navigate = useNavigate();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const q = params.get("q");
 
   useEffect(() => {
     axios.get(`https://api.spotify.com/v1/artists/${id}`)
@@ -102,30 +118,56 @@ function Detalleartista() {
     axios.get(`https://api.spotify.com/v1/artists/${id}/albums?include_groups=album&limit=10`)
       .then(res => setAlbums(res.data.items))
       .catch(err => console.error(err));
+
+    const favs = JSON.parse(localStorage.getItem("artistasFavoritos")) || [];
+    setFavoritos(favs);
   }, [id]);
+
+  const toggleFavorito = () => {
+    if (!artista) return;
+    let actualizados;
+    if (favoritos.find(a => a.id === artista.id)) {
+      actualizados = favoritos.filter(a => a.id !== artista.id);
+    } else {
+      actualizados = [...favoritos, artista];
+    }
+    setFavoritos(actualizados);
+    localStorage.setItem("artistasFavoritos", JSON.stringify(actualizados));
+  };
 
   return (
     <div className="detalle-artista">
-      <Link to="/" className="volver">Volver</Link>
+      <Link to="/" className="volver">Volver al inicio</Link>
+
+      {q && (
+        <button onClick={() => navigate(`/?q=${q}`)} className="volver">
+          🔙 Volver a la búsqueda de "{q}"
+        </button>
+      )}
 
       {artista && (
         <>
           <h1>{artista.name}</h1>
           {artista.images[0] && <img src={artista.images[0].url} alt={artista.name} />}
+          <button onClick={toggleFavorito}>
+            {favoritos.find(a => a.id === artista?.id)
+              ? "💔 Quitar de favoritos"
+              : "❤️ Agregar a favoritos"}
+          </button>
         </>
       )}
 
-  <div className="albumes">
-    {albums.map(album => (
-      <div key={album.id} className="album" onClick={() => navigate(`/album/${album.id}/${id}`)} style={{ cursor: 'pointer' }}>
-        {album.images[0] && <img src={album.images[0].url} alt={album.name} />}
-        <h4>{album.name}</h4>
-        <p>{album.release_date.slice(0, 4)}</p>
+      <div className="albumes">
+        {albums.map(album => (
+          <div key={album.id} className="album" onClick={() => navigate(`/album/${album.id}/${id}`)} style={{ cursor: 'pointer' }}>
+            {album.images[0] && <img src={album.images[0].url} alt={album.name} />}
+            <h4>{album.name}</h4>
+            <p>{album.release_date.slice(0, 4)}</p>
+          </div>
+        ))}
       </div>
-    ))}
-  </div>
-</div>
-);
+    </div>
+  );
 }
 
 //Pagina detalle álbum
