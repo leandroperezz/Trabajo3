@@ -26,12 +26,81 @@
     transform: rotate(360deg);
   }
 }
+.search-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.search-input {
+  padding: 0.5rem;
+  width: 300px;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: none;
+  margin-bottom: 1rem;
+}
+
+.search-button-container {
+  display: flex;
+  justify-content: center;
+}
+
 
 @media (prefers-reduced-motion: no-preference) {
   a:nth-of-type(2) .logo {
     animation: logo-spin infinite 20s linear;
   }
+  .artist-card {
+    display: inline-block;
+    margin: 1rem;
+    background: #2e2e2e;
+    padding: 1rem;
+    border-radius: 1rem;
+    cursor: pointer;
+    transition: transform 0.2s;
+    width: 150px;
+    text-align: center;
+  }
+  .artist-card:hover {
+    transform: scale(1.05);
+  }
+  
+  .artist-img {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+  
 }
+.favoritos {
+  position: absolute;
+  top: 2rem;
+  right: 2rem;
+  background: #1a1a1a;
+  padding: 1rem;
+  border-radius: 10px;
+  box-shadow: 0 0 10px #00f2ff55;
+  color: white;
+  max-width: 200px;
+}
+.favoritos h2 {
+  margin-top: 0;
+}
+.favoritos ul {
+  list-style: none;
+  padding: 0;
+}
+.favoritos li {
+  margin: 0.5em 0;
+}
+.favoritos li:hover {
+  color: #00f2ff;
+  text-decoration: underline;
+}
+
 
 .card {
   background-color: #2e2e2e;
@@ -46,4 +115,30 @@
 
 .read-the-docs {
   color: #888;
+}
+.albumes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.album {
+  background-color: #2e2e2e;
+  padding: 1rem;
+  border-radius: 1rem;
+  text-align: center;
+  width: 150px;
+  transition: transform 0.2s;
+}
+.album:hover {
+  transform: scale(1.05);
+}
+
+.album-img {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 0.5rem;
 }

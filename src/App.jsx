@@ -31,7 +31,7 @@ function Principal(){
   const navigate = useNavigate();
 
   useEffect(() => {
-    const favs = JSON.parse(localStorage.getItem("artistaFavoritos")) || [];
+    const favs = JSON.parse(localStorage.getItem("artistasFavoritos")) || [];
     setFavoritos(favs);
 
     axios.post("https://accounts.spotify.com/api/token",
@@ -83,19 +83,38 @@ function Principal(){
 
   return(<div className="App">
     <h1>Buscar Artistas</h1>
-    <form onSubmit={buscar}>
-      <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Nombre del artista..." />
-      <button type="submit">Buscar</button>
-    </form>
+    <form onSubmit={buscar} className="search-form">
+  <input
+    value={busqueda}
+    onChange={(e) => setBusqueda(e.target.value)}
+    placeholder="Nombre del artista..."
+    className="search-input"
+  />
+  <div className="search-button-container">
+    <button type="submit">Buscar</button>
+  </div>
+</form>
+
 
     <div className="listaartista">
       {artista.map(artista => (
-        <div key={artista.id} className="artist-card" onClick={() => navigate(`/artist/${artista.id}?q=${busqueda}`)}>
-          <img src={artista.images[0]?.url} alt={artista.name} />
-          <p>{artista.name}</p>
-        </div>
+        <div key={artista.id} className="artist-card" onClick={() => navigate(`/artist/${artista.id}`)}>
+        <img src={artista.images[0]?.url} alt={artista.name} className="artist-img" />
+        <p>{artista.name}</p>
+      </div>
       ))}
     </div>
+    <div className="favoritos">
+  <h2>⭐ Favoritos</h2>
+  <ul>
+    {favoritos.map(fav => (
+      <li key={fav.id} onClick={() => navigate(`/artist/${fav.id}`)} style={{ cursor: "pointer" }}>
+        {fav.name}
+      </li>
+    ))}
+  </ul>
+</div>
+
   </div>);
 }
 
@@ -155,12 +174,12 @@ function Detalleartista() {
               : "❤️ Agregar a favoritos"}
           </button>
         </>
-      )}
+      )}  
 
       <div className="albumes">
         {albums.map(album => (
           <div key={album.id} className="album" onClick={() => navigate(`/album/${album.id}/${id}`)} style={{ cursor: 'pointer' }}>
-            {album.images[0] && <img src={album.images[0].url} alt={album.name} />}
+            {album.images[0] && <img src={album.images[0].url} alt={album.name} className="album-img" />}
             <h4>{album.name}</h4>
             <p>{album.release_date.slice(0, 4)}</p>
           </div>
